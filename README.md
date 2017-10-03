@@ -1,10 +1,7 @@
 PacBot Game Project
 
 By:
-Robert Bojs
-Micha Kunz
-Pragathi Shankar
-Justin Tomas
+Robert Bojs, Micha Kunz, Pragathi Shankar, and Justin Tomas
 
 For:
 CSC 480-01 : Artificial Intelligence
