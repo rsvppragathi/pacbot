@@ -20,10 +20,25 @@ class AtariEnvironment(object):
 def actor_learner(env, graph_ops, num_actions,summary_ops, saver):
     pass
 
+
+
+"""
+The graph is used to build a dict with certain values.
+We build one q network and one target q network.
+q network is used to continually update with scores.
+target q network is only occasionally updated, to create a slower and more
+stabile learning process.
+
+"""
 ##Robert
 def build_graph(num_actions):
     pass
 
+
+"""
+This is used for visualisation, dont know if we need that.
+Used to continually save information about reward, qmax, and epsilon.
+"""
 ##Robert
 def build_summaries():
     pass
