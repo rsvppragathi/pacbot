@@ -43,14 +43,28 @@ Used to continually save information about reward, qmax, and epsilon.
 def build_summaries():
     pass
 
+"""
+This method is used to train our model by setting an environment for each 
+thread, initializing the variables, initializing the target netwrok weights,
+and starting the action learner threads. Summary of the training statistics
+are printed as it learns.
+"""
 ##Pragathi
 def train(session, graph_ops, num_actions, saver):
     pass
 
+"""
+This method is for evaluating the model. The graph_ops varible that is passed
+to it is unpacked, and the reward state is printed untilthe agent is done
+learning.
+"""
 ##Pragathi
 def evaluation(session, graph_ops, saver):
 
-
+"""
+This method is udes for setting the variables used in various methods. This
+includes num_actions, graph_ops, and saver.
+"""
 ##Pragathi
 def main(_):
     pass
