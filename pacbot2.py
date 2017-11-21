@@ -44,8 +44,6 @@ class AtariEnvironment(object):
 
 ##ALL
 def actor_learner(env, graph_ops, num_actions,summary_ops, saver):
-    pass
-
 
 
 """
@@ -58,7 +56,35 @@ stabile learning process.
 """
 ##Robert
 def build_graph(num_actions):
-    pass
+    inputs, q_values = build_dqn(num_actions, action_repeat)
+    network_params = tf.trainable_variables()
+
+    target_inputs, target_q_values = build_dqn(num_actions, action_repeat)
+    target_network_params = tf.trainable_variables()[len(network_params):]
+
+    reset_target_network_params = \
+        [target_network_params[i].assign(network_params[i])
+         for i in range(len(target_network_params))]
+
+    x = tf.placeholder(tf.float32, [None, num_actions])
+    y = tf.placeholder(tf.float32, [None])
+
+    action_q_values = tf.reduce_sum(tf.multiply(q_values, x), reduction_indices=1)
+
+    cost = tflearn.mean_square(action_q_values, y)
+
+    optimizer = tf.train.RMSPropOptimizer(learning_rate)
+    grad_update = optimizer.minimize(cost, var_list=network_params)
+
+    graph_ops = {"inputs" : inputs,
+                "q_values" : q_values,
+                "target_inputs" = target_inputs,
+                "target_q_values" = target_q_values,
+                "reset_target_network_params" = reset_target_network_params,
+                "x" = x,
+                "y" = y,
+                "grad_update" = grad_update}
+    return graph_ops
 
 
 """
@@ -77,7 +103,17 @@ are printed as it learns.
 """
 ##Pragathi
 def train(session, graph_ops, num_actions, saver):
-    pass
+    env = gym.make(game)
+
+    session.run(tf.global_variables_initializer())
+    session.run(graph_ops["reset_target_network_params"])
+
+    last_summary_time = 0
+    while True:
+        for env in envs:
+            env.render()
+
+
 
 """
 This method is for evaluating the model. The graph_ops varible that is passed
