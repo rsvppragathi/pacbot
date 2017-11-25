@@ -21,7 +21,7 @@ epsilon = 0.1
 ##Justin
 def build_dqn(num_actions, action_repeat):
 
-    inputs = tf.placeholder(tf.float32, [None, action_repeat, 84, 84])
+    inputs = tf.placeholder(tf.float32,[None, action_repeat, 84, 84])
 
     net = transpose(inputs, [0,2,3,1])
     net = tflearn.conv_2d(net, 32, 8, strides=4, activation='relu')
@@ -44,17 +44,17 @@ class AtariEnvironment(object):
 
 ##ALL
 def actor_learner(env, graph_ops, num_actions,summary_ops, saver):
+    pass
+
+# """
+# The graph is used to build a dict with certain values.
+# We build one q network and one target q network.
+# q network is used to continually update with scores.
+# target q network is only occasionally updated, to create a slower and more
+# stabile learning process.
+# """
 
 
-"""
-The graph is used to build a dict with certain values.
-We build one q network and one target q network.
-q network is used to continually update with scores.
-target q network is only occasionally updated, to create a slower and more
-stabile learning process.
-
-"""
-##Robert
 def build_graph(num_actions):
     inputs, q_values = build_dqn(num_actions, action_repeat)
     network_params = tf.trainable_variables()
@@ -76,14 +76,7 @@ def build_graph(num_actions):
     optimizer = tf.train.RMSPropOptimizer(learning_rate)
     grad_update = optimizer.minimize(cost, var_list=network_params)
 
-    graph_ops = {"inputs" : inputs,
-                "q_values" : q_values,
-                "target_inputs" = target_inputs,
-                "target_q_values" = target_q_values,
-                "reset_target_network_params" = reset_target_network_params,
-                "x" = x,
-                "y" = y,
-                "grad_update" = grad_update}
+    graph_ops = {"inputs" : inputs,"q_values" : q_values, "target_inputs" : target_inputs, "target_q_values" : target_q_values, "reset_target_network_params" : reset_target_network_params, "x" : x, "y" : y, "grad_update" : grad_update}
     return graph_ops
 
 
@@ -122,7 +115,7 @@ learning.
 """
 ##Pragathi
 def evaluation(session, graph_ops, saver):
-
+    pass
 """
 This method is udes for setting the variables used in various methods. This
 includes num_actions, graph_ops, and saver.
