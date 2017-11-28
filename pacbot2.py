@@ -34,13 +34,41 @@ def build_dqn(num_actions, action_repeat):
 class AtariEnvironment(object):
 
     def __init__(self, gym_env, action_repeat):
-        pass
+        self.env = gym_env
+        self.action_repeat = action_repeat
+
+        self.gym_actions = range(gym_env.action_space.n)
+        self.state_buffer = deque()
+
+
     def get_initial_state(self):
-        pass
+        self.state_buffer = deque()
+
+        x_t = self.env.reset()
+        x_t = self.get_preprocessed_frame(x_t)
+        s_t = np.stack([x_t for i in range(self.action_repeat)], axis=0)
+
+        for i in range(self.action_repeat-1):
+            self.state_buffer.append(x_t)
+        return s_t
+
     def get_preprocessed_frame(self, observation):
-        pass
+        return resize(rgb2gray(observation), (110, 84))[13:110 - 13, :]
+
     def step(self, action_index):
-        pass
+        x_t1, r_t, terminal, info = self.env.step(self.gym_actions[action_index])
+        x_t1 = self.get_preprocessed_frame(x_t1)
+
+        previous_frames = np.array(self.state_buffer)
+        s_t1 = np.empty((self.action_repeat, 84, 84))
+        s_t1[:self.action_repeat-1, :] = previous_frames
+        s_t1[self.action_repeat-1] = x_t1
+
+        # Pop the oldest frame, add the current frame to the queue
+        self.state_buffer.popleft()
+        self.state_buffer.append(x_t1)
+
+        return s_t1, r_t, terminal, info
 
 ##ALL
 def actor_learner(env, graph_ops, num_actions,summary_ops, saver):
@@ -122,4 +150,5 @@ includes num_actions, graph_ops, and saver.
 """
 ##Pragathi
 def main(_):
+    
     pass
