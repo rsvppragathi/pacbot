@@ -8,24 +8,32 @@ import timesteps
 
 game_name = "MsPacman-v0"
 
+summary_dir = '/tmp/tflearn_logs/'
+checkpoint_path = 'tmp/qlearning.ckpt'
+
+#Number of training steps
 Training_Max = 40000
+#Counter for training steps
 T = 0
+#number of frames kept at one time
 action_repeat = 4
-
+#
 learning_rate = 0.001
-
+#reward discount rate
 gamma = 0.99
 
 final_epsilon = 0.1
+
 epsilon = 1.0
-
+#possible actions for MsPacman
 action_space = 9
-
+#how often to save model
 sum_interval = 5000
 
 
-##Justin
-def build_dqn(num_actions, action_repeat):
+#create conv_2d network, two layers.
+#network is used to build model to save.
+def build_deepQnetwork(num_actions, action_repeat):
 
     inputs = tf.placeholder(tf.float32,[None, action_repeat, 84, 84])
 
@@ -36,7 +44,7 @@ def build_dqn(num_actions, action_repeat):
     q_values = tflearn.fully_connected(net, num_actions)
     return inputs, q_values
 
-##Micha
+#wrapper for gym environment
 class AtariEnvironment(object):
 
     def __init__(self, gym_env, action_repeat):
@@ -46,7 +54,7 @@ class AtariEnvironment(object):
         self.gym_actions = range(gym_env.action_space.n)
         self.state_buffer = deque()
 
-
+    #start the program, get the first state.
     def get_initial_state(self):
         self.state_buffer = deque()
 
@@ -58,9 +66,11 @@ class AtariEnvironment(object):
             self.state_buffer.append(observation)
         return obs_array
 
+    #used to crop the image, we only care about 110x84 pixels of the frame,rest is padding.
     def get_preprocessed_frame(self, observation):
         return resize(rgb2gray(observation), (110, 84))[13:110 - 13, :]
 
+    #execute step based on action.
     def step(self, action_index):
         observation, reward, terminal, info = self.env.step(self.gym_actions[action_index])
         observation = self.get_preprocessed_frame(observation)
@@ -76,7 +86,8 @@ class AtariEnvironment(object):
 
         return obs_list, reward, terminal, info
 
-##ALL
+
+#implementing one-step q-learning.
 def actor_learner(env, session, graph_ops, num_actions,summary_ops, saver):
 
     inputs = graph_ops["inputs"]
@@ -84,7 +95,7 @@ def actor_learner(env, session, graph_ops, num_actions,summary_ops, saver):
     target_inputs = graph_ops["target_inputs"]
     target_q_values = graph_ops["target_q_values"]
     reset_target_network_params = graph_ops["reset_target_network_params"]
-    x = graph_ops["x"]
+    a = graph_ops["a"]
     y = graph_ops["y"]
     grad_update = graph_ops["grad_update"]
 
@@ -92,8 +103,9 @@ def actor_learner(env, session, graph_ops, num_actions,summary_ops, saver):
 
     env = AtariEnvironment(env,action_repeat)
 
+    #gradients
     s_grad = []
-    x_grad = []
+    a_grad = []
     y_grad = []
     t = 0
     while T < Training_Max:
@@ -105,11 +117,13 @@ def actor_learner(env, session, graph_ops, num_actions,summary_ops, saver):
         ep_t = 0
 
         while True:
+            #forward q network, Q(s,a)
             readout_t = q_values.eval(session=session, feed_dict={s: [s_t]})
 
             action_array = np.zeros([action_space])
             if random.random() <= epsilon:
                 move = random.randrange(action_space)
+                move = env.action_space.sample()
             else:
                 move = np.argmax(readout_t)
             a_t[move] = 1
@@ -128,7 +142,7 @@ def actor_learner(env, session, graph_ops, num_actions,summary_ops, saver):
             else:
                 y_grad.append(clipped_reward + gamma * np.argmax(readout_j1))
 
-            x_grad.append(x_t)
+            a_grad.append(a_t)
             s_grad.append(s_t)
 
             s_t = s_t1
@@ -142,10 +156,10 @@ def actor_learner(env, session, graph_ops, num_actions,summary_ops, saver):
                 session.run(reset_target_network_params)
             if t % I_AsyncUpdate == 0 or terminal:
                 if s_batch:
-                    session.run(grad_update, feed_dict = {y: y_batch, x_batch, s_batch})
+                    session.run(grad_update, feed_dict = {y: y_batch, a_batch, s_batch})
 
                 s_grad = []
-                x_grad = []
+                a_grad = []
                 y_grad = []
 
             if t % checkpoint_interval == 0:
@@ -169,27 +183,27 @@ def actor_learner(env, session, graph_ops, num_actions,summary_ops, saver):
 
 
 def build_graph(num_actions):
-    inputs, q_values = build_dqn(num_actions, action_repeat)
+    inputs, q_values = build_deepQnetwork(num_actions, action_repeat)
     network_params = tf.trainable_variables()
 
-    target_inputs, target_q_values = build_dqn(num_actions, action_repeat)
+    target_inputs, target_q_values = build_deepQnetwork(num_actions, action_repeat)
     target_network_params = tf.trainable_variables()[len(network_params):]
 
     reset_target_network_params = \
         [target_network_params[i].assign(network_params[i])
          for i in range(len(target_network_params))]
 
-    x = tf.placeholder(tf.float32, [None, num_actions])
+    a = tf.placeholder(tf.float32, [None, num_actions])
     y = tf.placeholder(tf.float32, [None])
 
-    action_q_values = tf.reduce_sum(tf.multiply(q_values, x), reduction_indices=1)
+    action_q_values = tf.reduce_sum(tf.multiply(q_values, a), reduction_indices=1)
 
     cost = tflearn.mean_square(action_q_values, y)
 
     optimizer = tf.train.RMSPropOptimizer(learning_rate)
     grad_update = optimizer.minimize(cost, var_list=network_params)
 
-    graph_ops = {"inputs" : inputs,"q_values" : q_values, "target_inputs" : target_inputs, "target_q_values" : target_q_values, "reset_target_network_params" : reset_target_network_params, "x" : x, "y" : y, "grad_update" : grad_update}
+    graph_ops = {"inputs" : inputs,"q_values" : q_values, "target_inputs" : target_inputs, "target_q_values" : target_q_values, "reset_target_network_params" : reset_target_network_params, "a" : a, "y" : y, "grad_update" : grad_update}
     return graph_ops
 
 
@@ -197,7 +211,7 @@ def build_graph(num_actions):
 This is used for visualisation, dont know if we need that.
 Used to continually save information about reward, qmax, and epsilon.
 """
-##Robert
+
 def build_summaries():
     scalar_summary = tf.summary.scalar
     reward = tf.Variable(0.)
@@ -258,7 +272,7 @@ This method is for evaluating the model. The graph_ops varible that is passed
 to it is unpacked, and the reward state is printed untilthe agent is done
 learning.
 """
-##Pragathi
+
 def test_model(session, graph_ops, saver):
     saver.restore(session, model_path)
 
