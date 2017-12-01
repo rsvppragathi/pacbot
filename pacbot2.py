@@ -11,7 +11,7 @@ game_name = "MsPacman-v0"
 
 summary_dir = '/tmp/tflearn_logs/'
 checkpoint_path = 'tmp/qlearning.ckpt'
-
+model_path = '/Users/robertbojs/Documents/CINEK4/CSC480/pacbot/qlearning.ckpt-626000'
 #Number of training steps
 Training_Max = 40000
 #Counter for training steps
@@ -175,7 +175,12 @@ def actor_learner(env, session, graph_ops,summary_ops, saver):
                 stats = [ep_reward, q_max/float(ep_t), epsilon]
                 for i in range(len(stats)):
                     session.run(assign_ops[i],{summary_placeholders[i]: float(stats[i])})
-            break
+                print("Step", t,
+                      "| Reward: %.2i" % int(ep_reward), " Qmax: %.4f" %
+                      (q_max/float(ep_t)),
+                      " Epsilon: %.5f" % epsilon, " Epsilon progress: %.6f" %
+                      (t/float(anneal_epsilon_timesteps)))
+                break
 
 
 
@@ -284,12 +289,12 @@ def test_model(session, graph_ops, saver):
     saver.restore(session, model_path)
 
     env = gym.make(game_name)
-    monitor_env = gym.wrappers.Monitor(monitor_env, "qlearning/eval", force=True)
+    monitor_env = gym.wrappers.Monitor(env, "qlearning/eval", force=True)
 
-    inputs = graph["inputs"]
+    inputs = graph_ops["inputs"]
 
     #network
-    q_values = graph["q_values"]
+    q_values = graph_ops["q_values"]
 
     env = AtariEnvironment(monitor_env, action_repeat)
 
@@ -306,7 +311,7 @@ def test_model(session, graph_ops, saver):
 
         while not terminal:
             monitor_env.render()
-            readout_t = q_values.eval(session, feed_dict={inputs : [q_values]})
+            readout_t = q_values.eval(session=session, feed_dict={inputs : [obs]})
             #make move with highest score
             move = np.argmax(readout_t)
             observation, reward, terminal, _ = env.step(move)
@@ -318,24 +323,24 @@ def test_model(session, graph_ops, saver):
 
 """
 This method is udes for setting the variables used in various methods. This
-includes num_actions, graph_ops, and saver.
+includes num_actions, graph_ops_ops, and saver.
 """
 
 #Start a session for easier control of actions.
-#Build graph. Creates dict contatining network and target network.
+#Build graph_ops. Creates dict contatining network and target network.
 #Choose between training and testing.
 
 def main(_):
 
     with tf.Session() as session:
-        graph = build_graph(action_space)
+        graph_ops = build_graph(action_space)
         saver = tf.train.Saver(max_to_keep=5)
 
     if sys.argv[1] == 'training':
-        train_model(session, graph, saver)
+        train_model(session, graph_ops, saver)
 
     elif sys.argv[1] == 'testing':
-        test_model(session, graph, saver)
+        test_model(session, graph_ops, saver)
 
     else:
         print('Pick training or testing by writing: python pacbot2.py training/testing')
