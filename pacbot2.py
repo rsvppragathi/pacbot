@@ -12,6 +12,9 @@ game_name = "MsPacman-v0"
 summary_dir = '/tmp/tflearn_logs/'
 checkpoint_path = 'tmp/qlearning.ckpt'
 model_path = '/Users/robertbojs/Documents/CINEK4/CSC480/pacbot/qlearning.ckpt-626000'
+
+show_training = True
+
 #Number of training steps
 Training_Max = 40000
 #Counter for training steps
@@ -89,6 +92,8 @@ class AtariEnvironment(object):
 
         return obs_list, reward, terminal, info
 
+    def render(self):
+        self.env.render()
 
 #implementing one-step q-learning.
 def actor_learner(env, session, graph_ops,summary_ops, saver):
@@ -123,6 +128,7 @@ def actor_learner(env, session, graph_ops,summary_ops, saver):
         ep_t = 0
 
         while True:
+            env.render()
             #forward q network, Q(s,a)
             readout_t = q_values.eval(session=session, feed_dict={inputs: [obs_array]})
 
@@ -175,11 +181,14 @@ def actor_learner(env, session, graph_ops,summary_ops, saver):
                 stats = [ep_reward, q_max/float(ep_t), epsilon]
                 for i in range(len(stats)):
                     session.run(assign_ops[i],{summary_placeholders[i]: float(stats[i])})
+                """
                 print("Step", t,
                       "| Reward: %.2i" % int(ep_reward), " Qmax: %.4f" %
                       (q_max/float(ep_t)),
                       " Epsilon: %.5f" % epsilon, " Epsilon progress: %.6f" %
                       (t/float(anneal_epsilon_timesteps)))
+                """
+                print("Step", t, " | Reward: %.2i" % int(ep_reward))
                 break
 
 
@@ -265,12 +274,11 @@ def train_model(session, graph_ops, saver):
     actor_learner(env, session, graph_ops, summary_ops, saver)
 
     previous_time_step = 0
-
+    env.reset()
     while True:
 
         if show_training:
-            for env in envs:
-                env.render()
+            env.render()
         now = time.time()
         if now - previous_time > sum_interval:
             summary_str = session.run(summary_op)
